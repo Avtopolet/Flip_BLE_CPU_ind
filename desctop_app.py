@@ -7,7 +7,7 @@ async def scan_and_connect():
     devices = await BleakScanner.discover()
     for d in devices:
         print(d)
-    device = await BleakScanner.find_device_by_name("Flipper Ynanu")
+    device = await BleakScanner.find_device_by_name("xxxxx") # Замените на имя вашего устройства
 
     if not device:
         print("Device not found")

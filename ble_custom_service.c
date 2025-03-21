@@ -2,46 +2,12 @@
 
 #define TAG "BleCustomSvc"
 
-static const uint16_t ble_svc_custom_uuid = 0x1234; // Ваш UUID
-
-/*
-
-static bool char_write_callback(const void* context, const uint8_t** data, uint16_t* data_len) {
-    FURI_LOG_I(TAG, "Write callback: context=%p, data=%p, data_len=%p", context, data, data_len);
-
-    // Проверка параметров
-    if (!context || !data || !data_len) {
-        FURI_LOG_E(TAG, "Invalid parameters in char_write_callback");
-        return false;
-    }
-
-    // Пример обработки данных
-    BleReaderApp* app = (BleReaderApp*)context;
-    if (*data && *data_len > 0) {
-        memcpy(app->char_data, *data, *data_len);
-        app->char_data_len = *data_len;
-
-        // Обновляем интерфейс
-        if (app->view_port) {
-            view_port_update(app->view_port);
-        } else {
-            FURI_LOG_E(TAG, "View port is not initialized");
-        }
-    }
-
-    return true; // Успешная обработка
-}
-*/
-// Callback для чтения данных
+static const uint16_t ble_svc_custom_uuid = 0x1234; // UUID сервиса
 
 
-
+// Этот коллбек я так и не заставил работать, он должен происходить, когда читается характеристика
 static bool char_read_callback(const void* context, const uint8_t** data, uint16_t* data_len) {
-    //UNUSED(context);
-    // Пример статических данных
-    
-    
-    
+        
     FURI_LOG_I(TAG, "Entering char_read_callback");
           // Если context не обязателен, уберите проверку
     if (!context) {
@@ -65,7 +31,8 @@ static bool char_read_callback(const void* context, const uint8_t** data, uint16
         return false;
 }
 
-// Обработчик событий BLE
+// Обработчик событий BLE Тут происходит запись данных из характеристики и перемещение их в структуру контекста app
+// Через эту структуру данные попадают в колбек отрисовки 
 static BleEventAckStatus ble_custom_service_event_handler(void* event, void* context) {
     BleCustomService* svc = (BleCustomService*)context;
     if (!svc) {
@@ -75,9 +42,7 @@ static BleEventAckStatus ble_custom_service_event_handler(void* event, void* con
     
     FURI_LOG_I(TAG, " >>>>----------------------- BLE event handler called-----------------------<<<");
 
-    //uint8_t* event_data = (uint8_t*)event;
-    //uint16_t event_code = *(uint16_t*)event_data;
-    //FURI_LOG_I(TAG, "Event code: 0x%04X", event_code); // Добавьте этот лог
+    
     BleEventAckStatus ret = BleEventNotAck;
 
     hci_uart_pckt* hci_pckt = (hci_uart_pckt*)event;
@@ -89,7 +54,7 @@ static BleEventAckStatus ble_custom_service_event_handler(void* event, void* con
         FURI_LOG_I(TAG, "VS Event code: 0x%04X", vs_evt_code);
 
         switch (vs_evt_code) {
-        case ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE: {
+        case ACI_GATT_ATTRIBUTE_MODIFIED_VSEVT_CODE: {    // Это происходит при изменении характеристики
             aci_gatt_attribute_modified_event_rp0* attribute_modified = 
                 (aci_gatt_attribute_modified_event_rp0*)blecore_evt->data;
             FURI_LOG_I(TAG, " <<<< Attribute handle: %d", attribute_modified->Attr_Handle);
@@ -97,16 +62,14 @@ static BleEventAckStatus ble_custom_service_event_handler(void* event, void* con
 
             FURI_LOG_I(TAG, "Attribute handle: %d", attribute_modified->Attr_Handle);
             
-           // if (attribute_modified->Attr_Handle == svc->char_handle) {
+           // if (attribute_modified->Attr_Handle == svc->char_handle) { // тут я так и не смог отладить, 
+		   // поттому что хендл созданной характеристики отличается от хендла атрибута (44 и 45), хз почему так
 
                 FURI_LOG_I(TAG, "Data length: %d", attribute_modified->Attr_Data_Length);
                 FURI_LOG_I(TAG, "Data: %02X %02X %02X", 
                            attribute_modified->Attr_Data[0], 
                            attribute_modified->Attr_Data[1], 
                            attribute_modified->Attr_Data[2]);
-                
-                
-                
                 
                 memcpy(svc->buffer, attribute_modified->Attr_Data, attribute_modified->Attr_Data_Length);
                 svc->data_length = attribute_modified->Attr_Data_Length;
@@ -139,7 +102,7 @@ static BleEventAckStatus ble_custom_service_event_handler(void* event, void* con
            // }
             break;
         }
-        case ACI_ATT_READ_RESP_VSEVT_CODE: {
+        case ACI_ATT_READ_RESP_VSEVT_CODE: { // Это не работает, я пока не осилил
             aci_att_read_resp_event_rp0* read_resp = 
                 (aci_att_read_resp_event_rp0*)blecore_evt->data;
 
@@ -157,18 +120,10 @@ static BleEventAckStatus ble_custom_service_event_handler(void* event, void* con
 
     return ret;
 }
-/*
-static bool
-    dev_info_char_data_callback(const void* context, const uint8_t** data, uint16_t* data_len) {
-    *data_len = (uint16_t)strlen(context); //-V1029
-    if(data) {
-        *data = (const uint8_t*)context;
-    }
-    return false;
-}*/
 
 
-// Создание сервиса
+// Создание сервиса, тут много отладочной информации,
+// Виден путь, как я с эти разбирался и проверял на каждом шаге, оставлю :)
 BleCustomService* ble_custom_service_start(void* ctx) {
 
     if (!ctx) {
@@ -187,10 +142,6 @@ BleCustomService* ble_custom_service_start(void* ctx) {
     for (size_t i = 0; i < sizeof(BleReaderApp); i++) {
         FURI_LOG_I(TAG, "ctx[%zu] = 0x%02X", i, ctx_bytes[i]);
     };
-
-
-
-
    
     BleReaderApp* app = (BleReaderApp*)ctx;
     FURI_LOG_I(TAG, "Context transmitted: %p", app);
@@ -233,32 +184,6 @@ BleCustomService* ble_custom_service_start(void* ctx) {
    }
    FURI_LOG_I(TAG, "Custom service added successfully, handle: %d", custom_svc->svc_handle);
     // Параметры характеристики
-
-
-
-    /*
-typedef struct {
-    const char* name;
-    BleGattCharacteristicDescriptorParams* descriptor_params;
-    union {
-        struct {
-            const uint8_t* ptr;
-            uint16_t length;
-        } fixed;
-        struct {
-            cbBleGattCharacteristicData fn;
-            const void* context;
-        } callback;
-    } data;
-    Char_UUID_t uuid;
-    // Some packed bitfields to save space
-    BleGattCharacteristicDataType data_prop_type : 2;
-    uint8_t is_variable                          : 2;
-    uint8_t uuid_type                            : 2;
-    uint8_t char_properties;
-    uint8_t security_permissions;
-    uint8_t gatt_evt_mask;
-} BleGattCharacteristicParams;*/
    
     BleGattCharacteristicParams char_params = {
         .name = "DataChar",
