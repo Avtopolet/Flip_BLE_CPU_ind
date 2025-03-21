@@ -1,0 +1,46 @@
+App(
+    appid="ble_reader",
+    name="BlE Reader",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="my_first_app_main", 
+    stack_size=2 * 1024,
+
+     requires=[
+        "gui",
+        "ble",
+        "input",
+    ],
+
+    fap_private_libs=[
+    Lib(
+        name="stm32wb_ble_internal",  # Произвольное название
+        sources=[
+            # Пути к исходникам BLE GATT из копроцессора STM32WB
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/auto/ble_gatt_aci.c",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/auto/ble_gap_aci.c",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/template/osal.c",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/utilities/stm_list.c",
+          
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/interface/patterns/ble_thread/tl/hci_tl.c",
+            
+            
+            # Доп. файлы, если нужны (например, shci.c для управления копроцессором)
+        ],
+        fap_include_paths=[
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/auto",  # Путь к заголовкам
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/utilities/",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/ble/core/template/",
+            "C:/Flipper/flipperzero-firmware/lib/stm32wb_copro/wpan/interface/patterns/ble_thread/tl/",
+        ],
+        cdefines=[
+            "BLE_CORE",  # Возможные дефайны для активации функционала
+        ],
+    ),
+],
+
+    
+  
+    
+)
